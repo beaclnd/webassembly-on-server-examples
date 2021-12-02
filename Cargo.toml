@@ -7,4 +7,13 @@ edition = "2021"
 
 [dependencies]
 wasmer = "2.0"
+wasmer-wasi = "2.1.0"
 rand = "0.8.3"
+
+[[example]]
+name = "c2wasm-hello"
+path = "src/c2wasm/hello-world/main.rs"
+
+[[example]]
+name = "c2wasm-export"
+path = "src/c2wasm/import-export/main.rs"
