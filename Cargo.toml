@@ -16,4 +16,4 @@ path = "src/c2wasm/hello-world/main.rs"
 
 [[example]]
 name = "c2wasm-export"
-path = "src/c2wasm/import-export/main.rs"
+path = "src/c2wasm/import-export/export.rs"
