@@ -1,6 +1,6 @@
-use std::process::Command;
 use std::error::Error;
 use std::fs;
+use std::process::{self, Command};
 use wasmer::{imports, Array, Instance, Module, Store, ValueType, WasmPtr};
 
 #[derive(Copy, Clone, Debug)]
@@ -12,8 +12,12 @@ struct Simple_Str {
 unsafe impl ValueType for Simple_Str {}
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // compile source code in export.c to export.wasm
-    Command::new("make").output().expect("Failed to run make");
+    // compile source code from export.c to export.wasm
+    let build_output = Command::new("make").arg("export").output()?;
+    if build_output.stderr.len() > 0 {
+        println!("stderr: {}", String::from_utf8_lossy(&build_output.stderr));
+        process::exit(1);
+    }
 
     let wasm_bytes = fs::read("./export.wasm")?;
     let store = Store::default();
@@ -39,7 +43,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // read data from wasm module
     let memory = instance.exports.get_memory("memory")?;
-    println!("Memory in total: {} pages {} bytes", memory.size().0, memory.data_size());
+    println!(
+        "Memory in total: {} pages {} bytes",
+        memory.size().0,
+        memory.data_size()
+    );
     let malloc_in_module = instance
         .exports
         .get_native_function::<i32, i32>("mallocInModule")?;
@@ -62,7 +70,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let simple_str: Simple_Str = derefed_ptr.get();
     println!("Got simple_str from wasm module {:?}", simple_str);
     let string_val_ptr = WasmPtr::<u8, Array>::new(simple_str.offset as u32);
-    let string_val = string_val_ptr.get_utf8_string(&memory, simple_str.length as u32).unwrap();
+    let string_val = string_val_ptr
+        .get_utf8_string(&memory, simple_str.length as u32)
+        .unwrap();
     println!("Got string from wasm module: {}", string_val);
     free_in_module.call(simple_str_ptr.offset() as i32)?;
 
@@ -70,14 +80,29 @@ fn main() -> Result<(), Box<dyn Error>> {
     let string_to_write = b"Hello, I am from rust";
     let offset = malloc_in_module.call(string_to_write.len() as i32)?;
     let string_val_ptr = WasmPtr::<u8, Array>::new(offset as u32);
-    let cells = string_val_ptr.deref(&memory, 0, string_to_write.len() as u32).unwrap();
+    let cells = string_val_ptr
+        .deref(&memory, 0, string_to_write.len() as u32)
+        .unwrap();
     for i in 0..string_to_write.len() {
         cells[i].set(string_to_write[i]);
     }
-    let string_val = string_val_ptr.get_utf8_string(&memory, string_to_write.len() as u32).unwrap();
+    let string_val = string_val_ptr
+        .get_utf8_string(&memory, string_to_write.len() as u32)
+        .unwrap();
     println!("Got string rust written into wasm moudle: {}", string_val);
 
-    println!("Memory in total: {} pages {} bytes", memory.size().0, memory.data_size());
+    println!(
+        "Memory in total: {} pages {} bytes",
+        memory.size().0,
+        memory.data_size()
+    );
+
+    // Clang doesn't support wasm globals from C/C++
+    // we can only get the globals through the exported function instead of the exported global variables
+    let get_global_number = instance
+        .exports
+        .get_native_function::<(), i32>("getGlobalNumber")?;
+    println!("Got the global number: {}", get_global_number.call()?);
 
     Ok(())
 }

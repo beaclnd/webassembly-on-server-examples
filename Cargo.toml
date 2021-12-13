@@ -1,5 +1,5 @@
 [package]
-name = "wasmer_in_rust_test"
+name = "webassembly_on_server_examples"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,3 +17,7 @@ path = "src/c2wasm/hello-world/main.rs"
 [[example]]
 name = "c2wasm-export"
 path = "src/c2wasm/import-export/export.rs"
+
+[[example]]
+name = "c2wasm-import"
+path = "src/c2wasm/import-export/import.rs"
